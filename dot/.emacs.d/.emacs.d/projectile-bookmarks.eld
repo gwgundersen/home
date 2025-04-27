@@ -1,0 +1,1 @@
+("~/org/" "~/projects/blog/" "~/projects/mm/" "~/projects/vt/" "~/projects/gregorygundersen.com/" "~/projects/cv/" "~/projects/anno/")
