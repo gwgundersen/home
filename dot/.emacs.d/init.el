@@ -4,14 +4,145 @@
 ;;
 ;; =============================================================================
 
-(set-frame-parameter nil 'alpha-background 85) ; Adjust the value (0-100) as desired
-(add-to-list 'default-frame-alist '(alpha-background . 55))
+;; ==================
+;; Package management
+;; ==================
 
-(defvar efs/frame-transparency '(90 . 90))
+(require 'package)
+(require 'use-package)
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                         ("melpa-stable" . "https://stable.melpa.org/packages/")
+                         ("gnu" . "https://elpa.gnu.org/packages/")))
+(package-initialize)
+(add-to-list 'load-path "~/.emacs.d/elisp")
+
+
+;; ==============
+;; Coding systems
+;; ==============
+
+;; Some programs like Flycheck run external shell commands and may misparse the
+;; output without the correct encodings
+(prefer-coding-system 'utf-8)
+(set-default-coding-systems 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+(setq default-buffer-file-coding-system 'utf-8)
+(set-selection-coding-system 'utf-8)
+
+
+;; ==========
+;; Navigation
+;; ==========
+
+;; Fuzzy find commands, files, and options in the minibuffer.
+(use-package ivy
+  :diminish
+  :bind ("C-s" . swiper)
+  :config
+  (ivy-mode 1))
+
+;; Enhanced versions of common Emacs commands (M-x, find-file, etc) using Ivy.
+(use-package counsel
+  :bind (("M-x" . counsel-M-x)
+         ("C-f" . counsel-fzf)
+	 ("C-r" . counsel-rg))
+  :config
+  ; Don't start searches with ^.
+  (setq ivy-initial-inputs-alist nil))
+
+;; Show available keybindings as you type.
+(use-package which-key
+  :defer 0
+  :diminish which-key-mode
+  :config
+  (which-key-mode)
+  (setq which-key-idle-delay 1))
+
+;; Inline autocompletion inside buffers (code, text, etc).
+(use-package company
+    :ensure t
+    :config
+    (global-company-mode t))
+
+
+;; ============
+;; Theme, fonts
+;; ============
+
+(use-package doom-themes
+  :init (load-theme 'doom-one t))
+
+(set-face-attribute 'default nil :family "monospace" :height 145)
+
+
+;; ============
+;; Screen width
+;; ============
+
+; Full screen on startup.
+(set-frame-parameter (selected-frame) 'fullscreen 'maximized)
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
+
+; Fill text to 100 characters.
+(setq-default fill-column 100)
+
+; Show vertical ruler at 1o0 characters.
+(add-hook 'prog-mode-hook 'whitespace-mode)
+(add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
+(add-hook 'org-mode-hook 'whitespace-mode)
+
+; Highlight characters over 100 characters.
+(require 'whitespace)
+(setq whitespace-line-column fill-column)
+(setq whitespace-style '(face lines-tail))
+
+
+;; ==================
+;; Project management
+;; ==================
+
+(use-package projectile
+  :diminish projectile-mode
+  :config (projectile-mode)
+  :custom ((projectile-completion-system 'ivy))
+  :bind-keymap
+  ("C-p" . projectile-command-map)
+  :init
+  (when (file-directory-p "~/base")
+    (setq projectile-project-search-path '("~/base")))
+  (when (file-directory-p "~/org")
+    (setq projectile-project-search-path '("~/org")))
+  (when (file-directory-p "~/projects")
+    (setq projectile-project-search-path '("~/projects")))
+  (setq projectile-switch-project-action #'projectile-dired))
+
+
+;; ======
+;; Keymap
+;; ======
+
+(global-set-key '[(control ?.)] 'shell-command)
+
+
+;; =============
+;; Git porcelain
+;; =============
+
+(use-package magit
+  :commands magit-status
+  :custom
+  (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1)
+  ;; Sort branches by recency, not alphabetically.
+  (magit-list-refs-sortby "-creatordate"))
+
 
 ;; ==========
 ;; Miscellany
 ;; ==========
+
+;; Keep cursor at same vertical position while scrolling.
+(setq scroll-preserve-screen-position t)
 
 ;; No startup screen, menu, toolbar, and scroll bar.
 (setq inhibit-startup-screen t)
@@ -33,9 +164,6 @@
 (column-number-mode)
 (global-display-line-numbers-mode t)
 
-;; Auto-complete.
-(global-auto-complete-mode t)
-
 ;; Stop customize from adding to this config.
 (setq custom-file (concat user-emacs-directory "custom.el"))
 (load custom-file 'noerror)
@@ -54,156 +182,17 @@
 (add-hook 'after-change-major-mode-hook (lambda() (electric-indent-mode -1)))
 
 ;; Edit multiple occurrences in the same way.
-(require 'iedit)
-
-
-;; ==================
-;; Package management
-;; ==================
-
-(require 'package)
-(require 'use-package)
-(add-to-list 'package-archives
-	'("melpa" . "https://melpa.org/packages/") t)
-(add-to-list 'package-archives
-	     '("melpa-stable" . "https://stable.melpa.org/packages/") t)
-(package-initialize)
-(add-to-list 'load-path "~/.emacs.d/elisp")
-
-
-;; ============
-;; Screen width
-;; ============
-
-; Full screen on startup.
-(set-frame-parameter (selected-frame) 'fullscreen 'maximized)
-(add-to-list 'default-frame-alist '(fullscreen . maximized))
-
-; Fill text to 80 characters.
-(setq-default fill-column 80)
-
-; Show vertical ruler at 80 characters.
-(add-hook 'prog-mode-hook 'whitespace-mode)
-(add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
-(add-hook 'org-mode-hook 'whitespace-mode)
-
-; Highlight characters over 80 characters.
-(require 'whitespace)
-(setq whitespace-line-column fill-column)
-(setq whitespace-style '(face lines-tail))
-
-
-;; ============
-;; Theme, fonts
-;; ============
-
-(use-package doom-themes
-  :init (load-theme 'doom-one t))
-
-;; Set fonts.
-(defvar gwg-font-size 160)
-(set-face-attribute 'default nil
-  :font "iosevka"
-  :height gwg-font-size)
-(set-face-attribute 'fixed-pitch nil
-  :font "iosevka"
-  :height gwg-font-size)
-
-
-;; ==================
-;; Project management
-;; ==================
-
-(use-package projectile
-  :diminish projectile-mode
-  :config (projectile-mode)
-  :custom ((projectile-completion-system 'ivy))
-  :bind-keymap
-  ("C-p" . projectile-command-map)
-  :init
-  (when (file-directory-p "~/projects")
-    (setq projectile-project-search-path '("~/projects")))
-  (when (file-directory-p "~/org")
-    (setq projectile-project-search-path '("~/org")))
-  (setq projectile-switch-project-action #'projectile-dired))
-
-
-;; ===============
-;; Text completion
-;; ===============
-
-;; Display keybinding options of while typing.
-(use-package which-key
-  :defer 0
-  :diminish which-key-mode
-  :config
-  (which-key-mode)
-  (setq which-key-idle-delay 1))
-
-(use-package ivy
-  :diminish
-  :bind ("C-s" . swiper)
-  :config
-  (ivy-mode 1))
-
-(use-package ivy-rich
-  :after ivy
-  :init
-  (ivy-rich-mode 1))
-
-(use-package counsel
-  :bind (("M-x" . counsel-M-x);
-	 ("C-f" . counsel-fzf)
-	 ("C-r" . counsel-rg))
-  :config
-  ; Don't start searches with ^.
-  (setq ivy-initial-inputs-alist nil))
-
-
-;; ============
-;; Key bindings
-;; ============
-
-;; Make ESC quit prompts.
-;;(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+(use-package iedit
+  :ensure t
+  :bind (("C-;" . iedit-mode)))
 
 ;; Don't just list buffers; offer to switch.
 (global-set-key (kbd "C-x C-b") 'switch-to-buffer)
 
 
-;; ===============
-;; Git integration
-;; ===============
-
-
-
-;; ===============
-;; Windows
-;; ===============
-
-(setq winum-keymap
-    (let ((map (make-sparse-keymap)))
-      (define-key map (kbd "C-`") 'winum-select-window-by-number)
-      (define-key map (kbd "C-2") 'winum-select-window-by-number)
-      (define-key map (kbd "M-0") 'winum-select-window-0-or-10)
-      (define-key map (kbd "M-1") 'winum-select-window-1)
-      (define-key map (kbd "M-2") 'winum-select-window-2)
-      (define-key map (kbd "M-3") 'winum-select-window-3)
-      (define-key map (kbd "M-4") 'winum-select-window-4)
-      (define-key map (kbd "M-5") 'winum-select-window-5)
-      (define-key map (kbd "M-6") 'winum-select-window-6)
-      (define-key map (kbd "M-7") 'winum-select-window-7)
-      (define-key map (kbd "M-8") 'winum-select-window-8)
-      map))
-
-(require 'winum)
-
-(winum-mode)
-
-
-;; -----------------------------------------------------------------------------
+;; =========
 ;; Functions
-;; -----------------------------------------------------------------------------
+;; =========
 
 (defun gwg-org-col ()
   (interactive)
@@ -241,33 +230,57 @@
 (global-set-key '[(meta ?w)] 'gwg-word-wrap)
 
 
-;; -----------------------------------------------------------------------------
-;; Language modes
-;; -----------------------------------------------------------------------------
 ;; ================
 ;; Language servers
 ;; ================
 
 (use-package lsp-mode
+  :ensure t
   :commands (lsp lsp-deferred)
-  :config (lsp-enable-which-key-integration t))
-
-
-;; ===========
-;; Python mode
-;; ===========
-
-(use-package python-mode
-    :ensure t
-    :hook (python-mode . lsp-deferred))
-
-;; Check syntax on the fly.
-(use-package flycheck
+  :hook (python-mode . lsp)
+  :init
+  (setq lsp-keymap-prefix "C-c l")
   :config
-  (setq-default flycheck-disabled-checkers '(python-pylint))
-  (global-flycheck-mode))
+  (lsp-enable-which-key-integration t))
 
-;; Check spelling.
+
+;; ======
+;; Python
+;; ======
+
+(use-package flycheck
+  :ensure t
+  :hook (python-mode . flycheck-mode)
+  :init
+  (setq flycheck-checker 'python-flake8)
+  (setq flycheck-temp-prefix ".flycheck")
+  :config
+  (setq-default flycheck-disabled-checkers '(python-mypy))
+  (set-face-attribute 'flycheck-warning nil
+                      :foreground "yellow"
+                      :weight 'bold)
+  (set-face-attribute 'flycheck-error nil
+                      :foreground "red"
+                      :weight 'bold))
+
+(defun resize-flycheck-error-buffer ()
+  "Resize the Flycheck error buffer to a fixed height."
+  (let ((desired-height 20))  ; Set your desired buffer height here
+    (with-current-buffer flycheck-error-list-buffer
+      (let ((window (get-buffer-window)))
+        (if window
+            (progn
+              (message "Resizing Flycheck error buffer to %d lines." desired-height)
+              (window-resize window (- desired-height (window-total-height window))))
+          (message "Flycheck error buffer window not found."))))))
+
+(add-hook 'flycheck-error-list-after-refresh-hook #'resize-flycheck-error-buffer)
+
+
+;; ========
+;; Spelling
+;; ========
+
 (use-package flyspell
   :config
   (set-face-attribute
@@ -281,42 +294,67 @@
    :background "#280008"
    :underline nil))
 
-
-;; ========
-;; Org mode
-;; ========
-
-(require 'org)
-(define-key global-map "\C-cl" 'org-store-link)
-(define-key global-map "\C-ca" 'org-agenda)
-(setq org-agenda-files   (list "~/org/")
-      org-refile-targets '((org-agenda-files :maxlevel . 5))
-      org-refile-use-outline-path 'file)
-
-;; Word wrap in org mode.
-(add-hook 'org-mode-hook 'gwg-word-wrap)
-
-;; No forced indentation
-(setq org-adapt-indentation nil)
-
-;; Allow selection by holding shift.
-(setq org-support-shift-select t)
-
-;; Citations.
-(use-package oc
-  :custom
-  (org-cite-global-bibliography '("/Users/gwg/org/references.bib")))
-
-;; Spell check.
 (setq ispell-program-name "aspell")
 
-;; =============
-;; Markdown mode
-;; =============
+;; Enable live spell checking in text-mode
+(add-hook 'text-mode-hook 'flyspell-mode)
+
+
+;; ===
+;; Org
+;; ===
+
+(use-package org
+  :defer t
+  :custom
+  (org-agenda-files (list "~/org/"))
+  (org-refile-targets '((org-agenda-files :maxlevel . 5)))
+  (org-refile-use-outline-path 'file)
+  ;; No forced indentation
+  (org-adapt-indentation nil)
+  ;; Allow selection by holding shift.
+  (org-support-shift-select t)
+  :hook
+  ;; Word wrap in org mode.
+  (org-mode . gwg-word-wrap))
+
+(use-package org-tempo
+  :after org
+  :config
+  (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
+  (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+  (add-to-list 'org-structure-template-alist '("py" . "src python")))
+
+
+;; ========
+;; Markdown
+;; ========
 
 (use-package markdown-mode
   :ensure t
   :mode ("README\\.md\\'" . gfm-mode)
-  :init (setq markdown-command "multimarkdown"))
+  :init (setq markdown-command "multimarkdown")
+  :hook (markdown-mode-hook . gwg-word-wrap))
 
-(add-hook 'markdown-mode-hook 'gwg-word-wrap)
+
+;; ====
+;; LLMs
+;; ====
+
+(use-package gptel
+  :ensure t
+  :bind
+  ("C-c g s" . gptel-send)
+  ("C-c g m" . gptel-menu)
+  :config
+  (setq gptel-api-key
+        (string-trim
+          (with-temp-buffer
+            (insert-file-contents "~/.gptel-openai-api-key")
+            (buffer-string)))))
+
+(defun gwg-gptel-backend-and-model ()
+  "Return gptel backend and model (if any)."
+  (let ((backend (if  (boundp 'gptel-backend)  (aref gptel-backend 1)))
+        (model (if  (boundp 'gptel-model) gptel-model)))
+    (format "(%s %s)" backend model)))
